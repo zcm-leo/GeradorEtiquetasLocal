@@ -20,7 +20,7 @@ def gerar_imagem_etiqueta(codigo_produto, localizacao):
     # --- Fontes (Carregando a partir da pasta 'fonts/') ---
     try:
         # Caminho relativo para as fontes que estão junto com o app
-        fonte_grande = ImageFont.truetype("fonts/DejaVuSans-Bold.ttf", size=160)
+        fonte_grande = ImageFont.truetype("fonts/DejaVuSans-Bold.ttf", size=120)
         fonte_pequena = ImageFont.truetype("fonts/DejaVuSans.ttf", size=45)
     except IOError:
         st.error("ERRO: Arquivos de fonte não encontrados na pasta 'fonts/'. Faça o deploy dos arquivos .ttf.")
