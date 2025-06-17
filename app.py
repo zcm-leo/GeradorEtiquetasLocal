@@ -80,8 +80,5 @@ if 'imagem_bytes' in st.session_state:
     st.image(st.session_state.imagem_bytes, caption="Pré-visualização da Etiqueta Gerada")
     img_bytes = st.session_state.imagem_bytes.getvalue()
     b64_img = base64.b64encode(img_bytes).decode()
-    print_button_html = f"""<style>@media print{{body *{{visibility:hidden}}#print-section, #print-section *{{visibility:visible}}#print-section{{position:absolute;left:0;top:0;width:100%}}}}</style><div id="print-section"><img src="data:image/png;base64,{b64_img}"></div><button onclick="window.print()">Imprimir Etiqueta</button>"""
-    col1, col2 = st.columns(2)
 
-    with col2:
-        st.download_button(label="Baixar Etiqueta (.png)", data=st.session_state.imagem_bytes, file_name=st.session_state.nome_arquivo, mime="image/png")
+st.download_button(label="Baixar Etiqueta (.png)", data=st.session_state.imagem_bytes, file_name=st.session_state.nome_arquivo, mime="image/png")
