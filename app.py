@@ -8,8 +8,8 @@ import io
 
 def gerar_imagem_etiqueta(codigo_produto, localizacao):
     """
-    Gera a imagem de 8x6 cm, com espaçamento vertical reduzido e fixo entre os
-    elementos, e centraliza o bloco de conteúdo na etiqueta.
+    Gera a etiqueta usando Code 128, o padrão moderno, que é mais compacto e eficiente.
+    A correta leitura do hífen depende da configuração do leitor (scanner) para o teclado ABNT2.
     """
     # --- Configurações da Etiqueta (8x6 cm) ---
     LARGURA_CM, ALTURA_CM, DPI = 8, 6, 300
@@ -17,10 +17,8 @@ def gerar_imagem_etiqueta(codigo_produto, localizacao):
     altura_px = int(ALTURA_CM / 2.54 * DPI)
     COR_FUNDO, COR_TEXTO = "white", "black"
     
-    # --- Margens e Espaçamento Fixo ---
     margem_px = int(0.25 / 2.54 * DPI)
-    # --- MUDANÇA PRINCIPAL: Espaçamento fixo e pequeno entre os elementos ---
-    padding_vertical_fixo = 20 # Espaço em pixels entre os itens
+    padding_vertical_fixo = 20
 
     # --- Fontes ---
     try:
@@ -31,16 +29,21 @@ def gerar_imagem_etiqueta(codigo_produto, localizacao):
         fonte_grande = ImageFont.load_default()
         fonte_pequena = ImageFont.load_default()
 
-    # --- Passo 1: MEDIR a altura de todos os elementos ---
+    # --- Passo 1: Medir altura dos textos ---
     temp_draw = ImageDraw.Draw(Image.new('RGB', (1, 1)))
-
     bbox_codigo = temp_draw.textbbox((0, 0), codigo_produto, font=fonte_grande)
     altura_codigo = bbox_codigo[3] - bbox_codigo[1]
+    bbox_local = temp_draw.textbbox((0, 0), localizacao, font=fonte_pequena)
+    altura_local = bbox_local[3] - bbox_local[1]
 
-    barcode_class = barcode.get_barcode_class('code39')
-    barcode_options = {'module_height': 9.0, 'write_text': False, 'add_checksum': False}
-    localizacao_maiuscula = localizacao.upper()
-    barcode_obj = barcode_class(localizacao_maiuscula, writer=ImageWriter())
+    # --- Passo 2: Gerar o barcode ---
+    # --- MUDANÇA PRINCIPAL AQUI: Voltando para o Code 128 ---
+    barcode_class = barcode.get_barcode_class('code128')
+    # Code 128 não precisa de opções especiais de checksum, é automático.
+    barcode_options = {'module_height': 9.0, 'write_text': False}
+    # Não precisa mais converter para maiúsculas.
+    barcode_obj = barcode_class(localizacao, writer=ImageWriter())
+    
     buffer_barcode = io.BytesIO()
     barcode_obj.write(buffer_barcode, options=barcode_options)
     buffer_barcode.seek(0)
@@ -51,39 +54,27 @@ def gerar_imagem_etiqueta(codigo_produto, localizacao):
     barcode_img_redimensionada = barcode_img.resize((barcode_largura_desejada, int(barcode_img.height * ratio)))
     altura_barcode = barcode_img_redimensionada.height
 
-    bbox_local = temp_draw.textbbox((0, 0), localizacao, font=fonte_pequena)
-    altura_local = bbox_local[3] - bbox_local[1]
-
-    # --- Passo 2: CALCULAR a posição inicial para centralizar o bloco ---
-    # Altura total do conteúdo, incluindo os espaçamentos fixos
+    # --- Passo 3: Centralizar o bloco e desenhar ---
     altura_total_bloco = altura_codigo + padding_vertical_fixo + altura_barcode + padding_vertical_fixo + altura_local
-    
-    # Posição Y inicial para que o bloco fique centralizado
     pos_y_inicial = (altura_px - altura_total_bloco) / 2
     pos_y_atual = pos_y_inicial
 
-    # --- Passo 3: DESENHAR a etiqueta final ---
     etiqueta = Image.new('RGB', (largura_px, altura_px), COR_FUNDO)
     draw = ImageDraw.Draw(etiqueta)
 
-    # 1. Código do Produto
     pos_x_codigo = (largura_px - (bbox_codigo[2] - bbox_codigo[0])) / 2
     draw.text((pos_x_codigo, pos_y_atual), codigo_produto, fill=COR_TEXTO, font=fonte_grande)
     pos_y_atual += altura_codigo + padding_vertical_fixo
 
-    # 2. Código de Barras
     pos_x_barcode = int((largura_px - barcode_img_redimensionada.width) / 2)
     etiqueta.paste(barcode_img_redimensionada, (pos_x_barcode, int(pos_y_atual)))
     pos_y_atual += altura_barcode + padding_vertical_fixo
 
-    # 3. Texto da Localização
     pos_x_local = (largura_px - (bbox_local[2] - bbox_local[0])) / 2
     draw.text((pos_x_local, int(pos_y_atual)), localizacao, fill=COR_TEXTO, font=fonte_pequena)
 
-    # --- ROTAÇÃO DA ETIQUETA ---
+    # --- ROTAÇÃO E SALVAMENTO ---
     etiqueta_rotacionada = etiqueta.rotate(90, expand=True)
-
-    # --- Salva a imagem ROTACIONADA em um buffer de bytes ---
     buffer_final = io.BytesIO()
     etiqueta_rotacionada.save(buffer_final, format="PNG")
     buffer_final.seek(0)
